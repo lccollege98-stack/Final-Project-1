@@ -8,7 +8,7 @@ This student project uses diamond details to estimate a price and explore the da
 - Estimates a diamond's price from its carat, cut, color, clarity, and measurements
 - Flags unusual diamond records
 - Shows charts and budget-based recommendations in the dashboard
-- Answers basic diamond questions using a small local search over reference notes
+- Retrieves diamond reference notes and can use an OpenAI-compatible custom LLM to answer questions
 
 ## Run on Windows
 
@@ -27,6 +27,18 @@ To run the API in a second terminal:
 ```
 
 Open `http://127.0.0.1:8000/docs` to try its endpoints.
+
+## Enable generated advisor answers
+
+The advisor searches the local notes in `data/diamond_knowledge.json`. Without an API key it shows the matching note directly. To generate an answer from the retrieved notes, configure an OpenAI-compatible chat-completions service in the same PowerShell window before starting the app:
+
+```powershell
+$env:OPENAI_API_KEY = "your-key"
+$env:OPENAI_BASE_URL = "https://api.openai.com/v1"
+$env:OPENAI_MODEL = "gpt-4o-mini"
+```
+
+For another compatible provider, set its base URL and model name. Keep the key in your environment; do not put it in project files or GitHub.
 
 If you do not have the project environment, create one and install the packages:
 

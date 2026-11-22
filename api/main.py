@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.data_pipeline import DiamondFeatureEngineer
-from src.rag import JewelryKnowledgeAssistant
+from src.rag import JewelryKnowledgeAssistant, LLMServiceError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -104,4 +104,7 @@ def anomaly_detection(diamond: DiamondInput):
 def advisor(question: str):
     if not question.strip():
         raise HTTPException(status_code=422, detail="Question cannot be empty")
-    return {"answer": assistant.answer(question)}
+    try:
+        return assistant.answer(question)
+    except LLMServiceError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

@@ -1,3 +1,5 @@
+.env
+.env.*
 *.py[cod]
 .DS_Store
 .ipynb_checkpoints/

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import html
 import joblib
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 from src.data_pipeline import DiamondFeatureEngineer, clean_diamonds
-from src.rag import JewelryKnowledgeAssistant
+from src.rag import JewelryKnowledgeAssistant, LLMServiceError
 
 
 DATA_PATH = "data/diamonds.csv"
@@ -28,9 +27,15 @@ def load_model():
     return joblib.load(MODEL_PATH)
 
 
+@st.cache_resource
+def load_assistant():
+    return JewelryKnowledgeAssistant()
+
+
 try:
     df = load_data()
     model = load_model()
+    assistant = load_assistant()
 except Exception as exc:
     st.error(f"Project artifacts are not ready: {exc}")
     st.info("Run `python src/train.py` after placing the dataset in `data/diamonds.csv`.")
@@ -106,5 +111,15 @@ with tab3:
 with tab4:
     question = st.text_input("Ask a diamond question", "What does VS1 clarity mean?")
     if st.button("Ask advisor"):
-        answer = JewelryKnowledgeAssistant().answer(question)
-        st.write(html.unescape(answer))
+        try:
+            result = assistant.answer(question)
+        except LLMServiceError as exc:
+            st.error(f"Custom LLM request failed: {exc}")
+        else:
+            st.write(result["answer"])
+            if result["mode"] == "retrieval":
+                st.info(
+                    "Showing the retrieved reference note. Set OPENAI_API_KEY to "
+                    "enable generated answers."
+                )
+            st.caption("Sources: " + "; ".join(result["sources"]))

@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Carat weight",
+    "text": "Carat measures a diamond's weight. One carat is 0.2 grams. Weight is not the same as visible size, and price also depends on cut, color, clarity, and other characteristics.",
+    "source": "GIA, The 4Cs of Diamond Quality: Carat — https://www.gia.edu/diamond-carat-weight"
+  },
+  {
+    "title": "Diamond cut",
+    "text": "Cut describes how a diamond's proportions and finish affect its interaction with light. The dataset uses Fair, Good, Very Good, Premium, and Ideal labels; these are dataset categories and should not be treated as a gemological certificate.",
+    "source": "GIA, The 4Cs of Diamond Quality: Cut — https://www.gia.edu/diamond-cut"
+  },
+  {
+    "title": "Diamond color",
+    "text": "The standard color scale for colorless diamonds runs from D, the least color, toward Z, with increasing visible color. The dataset includes grades D through J.",
+    "source": "GIA, The 4Cs of Diamond Quality: Color — https://www.gia.edu/diamond-color"
+  },
+  {
+    "title": "Diamond clarity",
+    "text": "Clarity grades describe internal inclusions and external blemishes. The dataset uses I1, SI2, SI1, VS2, VS1, VVS2, VVS1, and IF, from more visible inclusions toward fewer or no inclusions.",
+    "source": "GIA, The 4Cs of Diamond Quality: Clarity — https://www.gia.edu/diamond-clarity"
+  },
+  {
+    "title": "Price estimates",
+    "text": "This project estimates a listed price from examples in its training dataset. It is a learning and comparison tool, not a certified appraisal. Compare diamonds with similar attributes and verify grading reports before making a purchase.",
+    "source": "Diamond Price Prediction project notes"
+  },
+  {
+    "title": "Unusual listings",
+    "text": "A listing may be flagged when its measurements or other features differ from common examples. An anomaly flag is not proof of fraud; check data quality, dimensions, and certificate details.",
+    "source": "Diamond Price Prediction project notes"
+  }
+]
