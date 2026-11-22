@@ -1,0 +1,27 @@
+{
+  "selected_model": "xgboost",
+  "metrics": {
+    "random_forest": {
+      "mae": 268.1447466379676,
+      "rmse": 541.8871301122311,
+      "r2": 0.9814226961661496
+    },
+    "xgboost": {
+      "mae": 261.5334777832031,
+      "rmse": 512.5189819335938,
+      "r2": 0.9833817481994629
+    }
+  },
+  "row_count": 53774,
+  "feature_columns": [
+    "carat",
+    "cut",
+    "color",
+    "clarity",
+    "depth",
+    "table",
+    "x",
+    "y",
+    "z"
+  ]
+}
