@@ -1,6 +1,7 @@
 import json
 import pandas as pd
 from unittest.mock import MagicMock, patch
+from pathlib import Path
 
 from src.data_pipeline import DiamondFeatureEngineer, clean_diamonds
 from src.rag import JewelryKnowledgeAssistant
@@ -56,3 +57,13 @@ def test_advisor_sends_retrieved_context_to_compatible_llm():
     assert "Diamond clarity" in request_body["messages"][1]["content"]
     assert result["mode"] == "custom_llm"
     assert result["answer"] == "VS1 is a clarity grade."
+
+
+def test_eda_report_generates_files():
+    from src.eda_report import build_report
+
+    build_report()
+    root = Path(__file__).resolve().parents[1]
+
+    assert (root / "reports" / "diamond_eda.html").exists()
+    assert (root / "reports" / "diamond_eda_summary.md").exists()

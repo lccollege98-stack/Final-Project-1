@@ -1,36 +1,45 @@
-# Diamond Price Prediction
+# Diamond Price Prediction Project
 
-This student project uses diamond details to estimate a price and explore the dataset. It includes a small Streamlit dashboard and a FastAPI service.
+This is a Python project for analysing diamond prices. It uses the Kaggle diamonds
+dataset and includes data cleaning, charts, price prediction, anomaly detection,
+diamond recommendations and a simple chat interface.
 
-## What it does
+## Features
 
-- Compares Random Forest and XGBoost price models
-- Estimates a diamond's price from its carat, cut, color, clarity, and measurements
-- Flags unusual diamond records
-- Shows charts and budget-based recommendations in the dashboard
-- Retrieves diamond reference notes and can use an OpenAI-compatible custom LLM to answer questions
+- Random Forest and XGBoost price models
+- Price estimation from diamond attributes
+- Fair-price and under/over-price comparison
+- Isolation Forest anomaly detection
+- KMeans market segmentation
+- EDA charts and summary report
+- Permutation-based feature importance
+- RAG-style diamond advisor
+- Streamlit dashboard
+- FastAPI endpoints
 
-## Run on Windows
+## How to run
 
-The dataset and trained models are included. From the project folder, run:
+The dashboard can be started from the project folder:
 
 ```powershell
 & ".\.venv\Scripts\python.exe" -m streamlit run app.py
 ```
 
-Open `http://localhost:8501` for the dashboard.
+Open `http://localhost:8501`.
 
-To run the API in a second terminal:
+In another terminal, start the API:
 
 ```powershell
 & ".\.venv\Scripts\python.exe" -m uvicorn api.main:app --reload
 ```
 
-Open `http://127.0.0.1:8000/docs` to try its endpoints.
+Open `http://127.0.0.1:8000/docs`.
 
-## Enable generated advisor answers
+## Optional LLM setup
 
-The advisor searches the local notes in `data/diamond_knowledge.json`. Without an API key it shows the matching note directly. To generate an answer from the retrieved notes, configure an OpenAI-compatible chat-completions service in the same PowerShell window before starting the app:
+The advisor normally answers from `data/diamond_knowledge.json`. An
+OpenAI-compatible API can be used to generate answers from these retrieved notes.
+Set the following values in the terminal:
 
 ```powershell
 $env:OPENAI_API_KEY = "your-key"
@@ -38,28 +47,35 @@ $env:OPENAI_BASE_URL = "https://api.openai.com/v1"
 $env:OPENAI_MODEL = "gpt-4o-mini"
 ```
 
-For another compatible provider, set its base URL and model name. Keep the key in your environment; do not put it in project files or GitHub.
+Do not put an API key in the project files or GitHub.
 
-If you do not have the project environment, create one and install the packages:
+If the virtual environment is not available:
 
 ```powershell
 python -m venv .venv
 & ".\.venv\Scripts\python.exe" -m pip install -r requirements.txt
 ```
 
-To train the models again:
+Train the models again with:
 
 ```powershell
 & ".\.venv\Scripts\python.exe" src/train.py
 ```
 
-## Model results
+Create the EDA report with:
 
-The held-out test split selected XGBoost:
+```powershell
+& ".\.venv\Scripts\python.exe" src/eda_report.py
+```
+
+## Results
+
+The test data was used to compare the models:
 
 | Model | MAE | RMSE | R² |
 |---|---:|---:|---:|
 | Random Forest | $268.14 | $541.89 | 0.9814 |
 | XGBoost | $261.53 | $512.52 | 0.9834 |
 
-The data starts with 53,940 diamonds; cleaning leaves 53,774 records. Price estimates are for learning and comparison, not certified appraisals.
+The original dataset contains 53,940 rows. After cleaning, 53,774 rows remain.
+The price estimates are study outputs and not certified valuations.

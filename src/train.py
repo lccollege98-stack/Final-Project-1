@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -11,6 +10,8 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import IsolationForest, RandomForestRegressor
+from sklearn.inspection import permutation_importance
+from sklearn.cluster import KMeans
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -110,7 +111,6 @@ def main():
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(best["model"], MODEL_DIR / "diamond_model.joblib")
 
-    anomaly_features = ["carat", "depth", "table", "x", "y", "z", "premium_score"]
     engineered = DiamondFeatureEngineer().fit_transform(df)
     anomaly_columns = ["carat", "depth", "table", "x", "y", "z", "premium_score"]
     anomaly_scaler_data = engineered[anomaly_columns].replace([np.inf, -np.inf], np.nan).fillna(0)
@@ -128,6 +128,41 @@ def main():
         MODEL_DIR / "anomaly.joblib",
     )
 
+    segmentation_columns = ["carat", "cut_score", "color_score", "clarity_score", "price"]
+    segmentation_scaler = RobustScaler()
+    segmentation_values = segmentation_scaler.fit_transform(engineered[segmentation_columns])
+    segmentation_model = KMeans(n_clusters=3, random_state=42, n_init=10)
+    segmentation_model.fit(segmentation_values)
+    joblib.dump(
+        {
+            "model": segmentation_model,
+            "scaler": segmentation_scaler,
+            "columns": segmentation_columns,
+        },
+        MODEL_DIR / "segmentation.joblib",
+    )
+
+    explainability = permutation_importance(
+        best["model"],
+        X_test,
+        y_test,
+        n_repeats=5,
+        random_state=42,
+        n_jobs=-1,
+        scoring="neg_root_mean_squared_error",
+    )
+    importance = sorted(
+        (
+            {"feature": str(feature), "importance": float(value)}
+            for feature, value in zip(
+                X_test.columns,
+                explainability.importances_mean,
+            )
+        ),
+        key=lambda item: item["importance"],
+        reverse=True,
+    )
+
     metadata = {
         "selected_model": best["name"],
         "metrics": {
@@ -136,6 +171,7 @@ def main():
         },
         "row_count": len(df),
         "feature_columns": list(X.columns),
+        "feature_importance": importance,
     }
     (MODEL_DIR / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     print(json.dumps(metadata, indent=2))

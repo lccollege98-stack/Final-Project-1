@@ -2,8 +2,8 @@
   "selected_model": "xgboost",
   "metrics": {
     "random_forest": {
-      "mae": 268.1447466379676,
-      "rmse": 541.8871301122311,
+      "mae": 268.14474663796767,
+      "rmse": 541.8871301122313,
       "r2": 0.9814226961661496
     },
     "xgboost": {
@@ -23,5 +23,43 @@
     "x",
     "y",
     "z"
+  ],
+  "feature_importance": [
+    {
+      "feature": "y",
+      "importance": 1974.1061645507812
+    },
+    {
+      "feature": "carat",
+      "importance": 1855.2679809570313
+    },
+    {
+      "feature": "clarity",
+      "importance": 1150.5838256835937
+    },
+    {
+      "feature": "color",
+      "importance": 832.3377319335938
+    },
+    {
+      "feature": "z",
+      "importance": 638.8882202148437
+    },
+    {
+      "feature": "x",
+      "importance": 403.79832763671874
+    },
+    {
+      "feature": "cut",
+      "importance": 62.5678955078125
+    },
+    {
+      "feature": "depth",
+      "importance": 16.413037109375
+    },
+    {
+      "feature": "table",
+      "importance": 9.1806640625
+    }
   ]
 }

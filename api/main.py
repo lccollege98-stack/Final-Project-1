@@ -100,6 +100,23 @@ def anomaly_detection(diamond: DiamondInput):
     return {"is_anomaly": prediction == -1, "anomaly_score": round(score, 4)}
 
 
+@app.post("/recommend")
+def recommend(diamond: DiamondInput, budget: float = Query(gt=0)):
+    frame = to_frame(diamond)
+    estimate = float(app.state.model.predict(frame)[0])
+    if estimate > budget:
+        return {
+            "recommended": False,
+            "estimated_price": round(max(estimate, 0), 2),
+            "message": "The estimated value is above the requested budget.",
+        }
+    return {
+        "recommended": True,
+        "estimated_price": round(max(estimate, 0), 2),
+        "message": "This diamond falls within the requested budget.",
+    }
+
+
 @app.post("/advisor")
 def advisor(question: str):
     if not question.strip():

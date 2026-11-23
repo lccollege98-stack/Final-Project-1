@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import joblib
 import pandas as pd
 import plotly.express as px
@@ -11,9 +13,11 @@ from src.rag import JewelryKnowledgeAssistant, LLMServiceError
 
 DATA_PATH = "data/diamonds.csv"
 MODEL_PATH = "models/diamond_model.joblib"
+SEGMENTATION_PATH = "models/segmentation.joblib"
+METADATA_PATH = "models/metadata.json"
 
 st.set_page_config(page_title="Diamond Intelligence", layout="wide")
-st.title("AI-Powered Diamond Valuation & Jewelry Intelligence")
+st.title("Diamond Price and Market Analysis")
 st.caption("Decision support for diamond retailers and buyers - not a replacement for a certified appraisal.")
 
 
@@ -32,17 +36,36 @@ def load_assistant():
     return JewelryKnowledgeAssistant()
 
 
+@st.cache_resource
+def load_segmentation():
+    return joblib.load(SEGMENTATION_PATH)
+
+
+@st.cache_resource
+def load_metadata():
+    with open(METADATA_PATH, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
 try:
     df = load_data()
     model = load_model()
     assistant = load_assistant()
+    segmentation = load_segmentation()
+    metadata = load_metadata()
 except Exception as exc:
     st.error(f"Project artifacts are not ready: {exc}")
     st.info("Run `python src/train.py` after placing the dataset in `data/diamonds.csv`.")
     st.stop()
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["Market Dashboard", "Valuation", "Recommendations", "Jewelry Advisor"]
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    [
+        "Market Dashboard",
+        "Valuation",
+        "Recommendations",
+        "Jewelry Advisor",
+        "Explainability",
+    ]
 )
 
 with tab1:
@@ -60,6 +83,33 @@ with tab1:
     heatmap_columns = ["price", "carat", "depth", "table", "x", "y", "z", "volume", "premium_score"]
     st.plotly_chart(
         px.imshow(engineered[heatmap_columns].corr(), text_auto=".2f", title="Feature Correlations"),
+        use_container_width=True,
+    )
+
+    segment_values = segmentation["scaler"].transform(
+        engineered[segmentation["columns"]]
+    )
+    segment_numbers = segmentation["model"].predict(segment_values)
+    segment_summary = pd.DataFrame(
+        {
+            "cluster": segment_numbers,
+            "price": df["price"].to_numpy(),
+            "carat": df["carat"].to_numpy(),
+        }
+    )
+    cluster_order = (
+        segment_summary.groupby("cluster")[["price", "carat"]]
+        .median()
+        .sort_values(["price", "carat"])
+        .index.tolist()
+    )
+    cluster_names = {
+        cluster: name
+        for cluster, name in zip(cluster_order, ["Budget", "Mid Market", "Luxury"])
+    }
+    segment_summary["segment"] = segment_summary["cluster"].map(cluster_names)
+    st.plotly_chart(
+        px.histogram(segment_summary, x="segment", title="Diamond Market Segments"),
         use_container_width=True,
     )
 
@@ -103,8 +153,27 @@ with tab3:
             candidates["estimated_price"] = model.predict(candidate_features)
             candidates["value_gap"] = candidates["estimated_price"] - candidates["price"]
             candidates = candidates.sort_values("value_gap", ascending=False).head(20)
+            candidate_engineered = DiamondFeatureEngineer().fit_transform(candidates)
+            candidate_values = segmentation["scaler"].transform(
+                candidate_engineered[segmentation["columns"]]
+            )
+            candidate_clusters = segmentation["model"].predict(candidate_values)
+            candidates["segment"] = [
+                cluster_names.get(cluster, "Unknown") for cluster in candidate_clusters
+            ]
             st.dataframe(
-                candidates[["carat", "cut", "color", "clarity", "price", "estimated_price", "value_gap"]],
+                candidates[
+                    [
+                        "carat",
+                        "cut",
+                        "color",
+                        "clarity",
+                        "price",
+                        "estimated_price",
+                        "value_gap",
+                        "segment",
+                    ]
+                ],
                 use_container_width=True,
             )
 
@@ -123,3 +192,12 @@ with tab4:
                     "enable generated answers."
                 )
             st.caption("Sources: " + "; ".join(result["sources"]))
+
+with tab5:
+    st.subheader("Model Explainability")
+    st.caption(
+        "Permutation importance shows how much the model error changes when "
+        "an input feature is shuffled."
+    )
+    importance = pd.DataFrame(metadata["feature_importance"])
+    st.bar_chart(importance.set_index("feature"))
