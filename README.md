@@ -1,10 +1,9 @@
-# Diamond Price Prediction Project
+# Diamond Price Prediction
 
-This is a Python project for analysing diamond prices. It uses the Kaggle diamonds
-dataset and includes data cleaning, charts, price prediction, anomaly detection,
-diamond recommendations and a simple chat interface.
+This project uses the diamonds dataset to study diamond prices. I used Python
+to clean the data, make charts, compare models, and build a small dashboard and API.
 
-## Features
+## Project work
 
 - Random Forest and XGBoost price models
 - Price estimation from diamond attributes
@@ -17,7 +16,7 @@ diamond recommendations and a simple chat interface.
 - Streamlit dashboard
 - FastAPI endpoints
 
-## How to run
+## Running the project
 
 The dashboard can be started from the project folder:
 
@@ -35,7 +34,7 @@ In another terminal, start the API:
 
 Open `http://127.0.0.1:8000/docs`.
 
-## Optional LLM setup
+## LLM setup
 
 The advisor normally answers from `data/diamond_knowledge.json`. An
 OpenAI-compatible API can be used to generate answers from these retrieved notes.
@@ -46,8 +45,6 @@ $env:OPENAI_API_KEY = "your-key"
 $env:OPENAI_BASE_URL = "https://api.openai.com/v1"
 $env:OPENAI_MODEL = "gpt-4o-mini"
 ```
-
-Do not put an API key in the project files or GitHub.
 
 If the virtual environment is not available:
 
@@ -68,14 +65,7 @@ Create the EDA report with:
 & ".\.venv\Scripts\python.exe" src/eda_report.py
 ```
 
-## Results
+## Model results
 
-The test data was used to compare the models:
-
-| Model | MAE | RMSE | R² |
-|---|---:|---:|---:|
-| Random Forest | $268.14 | $541.89 | 0.9814 |
-| XGBoost | $261.53 | $512.52 | 0.9834 |
-
-The original dataset contains 53,940 rows. After cleaning, 53,774 rows remain.
-The price estimates are study outputs and not certified valuations.
+- Random Forest: MAE $268.14, RMSE $541.89, R² 0.9814
+- XGBoost: MAE $261.53, RMSE $512.52, R² 0.9834

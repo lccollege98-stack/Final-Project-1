@@ -1,26 +1,24 @@
-# Diamond Dataset Dictionary
+# Data Dictionary
 
-| Column | Meaning | Type |
-|---|---|---|
-| carat | Diamond weight in carats | Numeric |
-| cut | Cut quality: Fair to Ideal | Categorical |
-| color | Color grade: D (best) to J | Categorical |
-| clarity | Internal/external flaw grade: I1 to IF | Categorical |
-| depth | Total depth percentage | Numeric |
-| table | Table width percentage | Numeric |
-| x | Length in millimeters | Numeric |
-| y | Width in millimeters | Numeric |
-| z | Depth in millimeters | Numeric |
-| price | Listed price in US dollars | Numeric |
+The dataset has the following columns:
 
-## Engineered Features
+- **carat**: weight of the diamond
+- **cut**: cut quality, from Fair to Ideal
+- **color**: colour grade, from D to J
+- **clarity**: clarity grade, from I1 to IF
+- **depth**: total depth percentage
+- **table**: width of the top of the diamond
+- **x**: length in millimetres
+- **y**: width in millimetres
+- **z**: depth in millimetres
+- **price**: selling price in US dollars
 
-| Feature | Formula or Meaning |
-|---|---|
-| volume | x * y * z |
-| surface_area_proxy | x * y |
-| cut_score | Ordinal cut quality score |
-| color_score | Ordinal color quality score |
-| clarity_score | Ordinal clarity quality score |
-| premium_score | Sum of cut, color, and clarity scores |
-| carat_volume_ratio | Carat divided by volume |
+## New columns created during the project
+
+- **volume**: x multiplied by y and z
+- **surface_area_proxy**: x multiplied by y
+- **cut_score**: number given to each cut category
+- **color_score**: number given to each color category
+- **clarity_score**: number given to each clarity category
+- **premium_score**: cut score, color score and clarity score added together
+- **carat_volume_ratio**: carat divided by volume
