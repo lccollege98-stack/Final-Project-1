@@ -1,32 +1,50 @@
 [
   {
     "title": "Carat weight",
-    "text": "Carat measures a diamond's weight. One carat is 0.2 grams. Weight is not the same as visible size, and price also depends on cut, color, clarity, and other characteristics.",
-    "source": "GIA, The 4Cs of Diamond Quality: Carat — https://www.gia.edu/diamond-carat-weight"
+    "keywords": ["carat", "weight", "size", "points", "milligrams", "magic sizes"],
+    "text": "Carat measures weight, not the visible size of a diamond. One metric carat is 200 milligrams and is divided into 100 points. Larger carat weight can affect price, but color, clarity and cut also matter.",
+    "source": "GIA, Diamond Carat Weight — https://4cs.gia.edu/en-us/diamond-carat-weight/"
   },
   {
     "title": "Diamond cut",
-    "text": "Cut describes how a diamond's proportions and finish affect its interaction with light. The dataset uses Fair, Good, Very Good, Premium, and Ideal labels; these are dataset categories and should not be treated as a gemological certificate.",
-    "source": "GIA, The 4Cs of Diamond Quality: Cut — https://www.gia.edu/diamond-cut"
+    "keywords": ["cut", "craftsmanship", "proportions", "light", "brightness", "fire", "scintillation", "shape", "ideal", "premium", "fair"],
+    "text": "Cut describes how a diamond's proportions, facets and craftsmanship affect its interaction with light. GIA's cut grades from Excellent to Poor apply to standard round brilliant diamonds. The dataset uses Fair, Good, Very Good, Premium and Ideal; those dataset categories are not the same as GIA's cut grades.",
+    "source": "GIA, Diamond Cut — https://4cs.gia.edu/en-us/diamond-cut/"
   },
   {
     "title": "Diamond color",
-    "text": "The standard color scale for colorless diamonds runs from D, the least color, toward Z, with increasing visible color. The dataset includes grades D through J.",
-    "source": "GIA, The 4Cs of Diamond Quality: Color — https://www.gia.edu/diamond-color"
+    "keywords": ["color", "colour", "grade", "D", "J", "yellow", "colorless", "hue"],
+    "text": "The GIA D-to-Z scale grades how much color is present in a diamond, with D at the colorless end and increasing color toward Z. The project dataset includes only grades D through J.",
+    "source": "GIA, Diamond Color — https://4cs.gia.edu/en-us/diamond-color/"
   },
   {
     "title": "Diamond clarity",
-    "text": "Clarity grades describe internal inclusions and external blemishes. The dataset uses I1, SI2, SI1, VS2, VS1, VVS2, VVS1, and IF, from more visible inclusions toward fewer or no inclusions.",
-    "source": "GIA, The 4Cs of Diamond Quality: Clarity — https://www.gia.edu/diamond-clarity"
+    "keywords": ["clarity", "inclusion", "inclusions", "blemish", "blemishes", "VS1", "VS2", "VVS", "SI", "I1", "IF", "flawless"],
+    "text": "Clarity grading considers the number, size, location and visibility of inclusions and blemishes. GIA's clarity scale has 11 grades from Flawless to Included, assessed using 10x magnification. This dataset contains a subset of those grades: I1, SI2, SI1, VS2, VS1, VVS2, VVS1 and IF.",
+    "source": "GIA, Diamond Clarity — https://4cs.gia.edu/en-us/diamond-clarity/"
   },
   {
     "title": "Price estimates",
-    "text": "This project estimates a listed price from examples in its training dataset. It is a learning and comparison tool, not a certified appraisal. Compare diamonds with similar attributes and verify grading reports before making a purchase.",
+    "keywords": ["price", "value", "valuation", "fair price", "listed", "estimate", "appraisal", "cost"],
+    "text": "This project estimates listed prices from examples in its training dataset. It is for learning and comparison, not a certified appraisal. Compare diamonds with similar attributes and check grading reports before buying.",
     "source": "Diamond Price Prediction project notes"
   },
   {
-    "title": "Unusual listings",
-    "text": "A listing may be flagged when its measurements or other features differ from common examples. An anomaly flag is not proof of fraud; check data quality, dimensions, and certificate details.",
+    "title": "Price per carat",
+    "keywords": ["price per carat", "per carat", "ratio", "carat price", "compare"],
+    "text": "Price per carat is calculated as listed price divided by carat weight. In this project it is used only for descriptive analysis. It is not a prediction input because it contains the target price.",
+    "source": "Diamond Price Prediction project notes"
+  },
+  {
+    "title": "Unusual measurements and listings",
+    "keywords": ["anomaly", "anomalies", "outlier", "fraud", "suspicious", "dimensions", "measurement", "unusual", "isolation forest"],
+    "text": "An anomaly flag means a record differs from patterns in the data. It does not prove fraud. Check the dimensions, original listing and grading certificate.",
+    "source": "Diamond Price Prediction project notes"
+  },
+  {
+    "title": "Model feature importance",
+    "keywords": ["SHAP", "feature importance", "explain", "explanation", "influence", "important", "why", "price factor"],
+    "text": "The project uses permutation importance and SHAP to describe how the trained model uses its input features. These methods explain model behaviour; they do not prove that a feature causes a price change.",
     "source": "Diamond Price Prediction project notes"
   }
 ]

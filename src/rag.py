@@ -31,9 +31,16 @@ class JewelryKnowledgeAssistant:
         ).rstrip("/")
         self.model = model or os.getenv("OPENAI_MODEL") or "gpt-4o-mini"
         self.documents = json.loads(KNOWLEDGE_PATH.read_text(encoding="utf-8"))
-        self.vectorizer = TfidfVectorizer(stop_words="english")
+        self.vectorizer = TfidfVectorizer(
+            ngram_range=(1, 2),
+            sublinear_tf=True,
+            stop_words="english",
+        )
         self.matrix = self.vectorizer.fit_transform(
-            [f"{item['title']}. {item['text']}" for item in self.documents]
+            [
+                f"{item['title']}. {' '.join(item.get('keywords', []))}. {item['text']}"
+                for item in self.documents
+            ]
         )
 
     def retrieve(self, question: str) -> list[dict[str, str]]:

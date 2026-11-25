@@ -9,12 +9,14 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.data_pipeline import DiamondFeatureEngineer
+from src.explainability import DiamondPriceExplainer
 from src.rag import JewelryKnowledgeAssistant, LLMServiceError
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "models" / "diamond_model.joblib"
 ANOMALY_PATH = ROOT / "models" / "anomaly.joblib"
+SHAP_BACKGROUND_PATH = ROOT / "models" / "shap_background.joblib"
 
 
 class DiamondInput(BaseModel):
@@ -48,6 +50,12 @@ def load_artifacts():
         raise RuntimeError("Train the model first with: python src/train.py")
     app.state.model = joblib.load(MODEL_PATH)
     app.state.anomaly = joblib.load(ANOMALY_PATH)
+    if not SHAP_BACKGROUND_PATH.exists():
+        raise RuntimeError("Run src/train.py to create the SHAP background data.")
+    app.state.price_explainer = DiamondPriceExplainer(
+        app.state.model,
+        joblib.load(SHAP_BACKGROUND_PATH),
+    )
 
 
 def to_frame(diamond: DiamondInput) -> pd.DataFrame:
@@ -64,6 +72,29 @@ def predict_price(diamond: DiamondInput):
     frame = to_frame(diamond)
     estimated = float(app.state.model.predict(frame)[0])
     return {"estimated_price": round(max(estimated, 0), 2)}
+
+
+@app.post("/explain-price")
+def explain_price(diamond: DiamondInput):
+    frame = to_frame(diamond)
+    estimated = float(app.state.model.predict(frame)[0])
+    shap_explanations = app.state.price_explainer.explain(frame)
+    contributions = shap_explanations.iloc[0]
+    base_value = float(shap_explanations.attrs["base_values"][0])
+    explanation = sorted(
+        (
+            {"feature": feature, "contribution": round(float(value), 2)}
+            for feature, value in contributions.items()
+        ),
+        key=lambda item: abs(item["contribution"]),
+        reverse=True,
+    )
+    return {
+        "estimated_price": round(max(estimated, 0), 2),
+        "base_value": round(base_value, 2),
+        "explanation": explanation,
+        "note": "SHAP contributions explain this model prediction; they are not causal effects.",
+    }
 
 
 @app.post("/valuation", response_model=ValuationResponse)

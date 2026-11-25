@@ -7,5 +7,7 @@
 - Rows with zero or negative dimensions: 20
 - Median price: $2,401.00
 - Median carat: 0.70
+- Median price per carat: $3,496.25
 
-The HTML report contains price, carat, cut, and correlation visualizations.
+Price per carat is used only for analysis because it is calculated from the price target.
+The HTML report contains price, carat, cut, price-per-carat, and correlation charts.

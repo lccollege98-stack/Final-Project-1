@@ -8,12 +8,16 @@ import joblib
 import mlflow
 import numpy as np
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import IsolationForest, RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.cluster import KMeans
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, RobustScaler
 from xgboost import XGBRegressor
@@ -22,10 +26,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.data_pipeline import DiamondFeatureEngineer, clean_diamonds
+from src.explainability import DiamondPriceExplainer
 
 
 DATA_PATH = ROOT / "data" / "diamonds.csv"
 MODEL_DIR = ROOT / "models"
+REPORT_DIR = ROOT / "reports"
 
 
 def build_pipeline(model):
@@ -63,6 +69,38 @@ def evaluate(name, model, X_train, y_train, X_test, y_test):
     }
 
 
+def cross_validate_model(model, X_train, y_train):
+    folds = KFold(n_splits=3, shuffle=True, random_state=42)
+    scores = cross_validate(
+        model,
+        X_train,
+        y_train,
+        cv=folds,
+        scoring={
+            "mae": "neg_mean_absolute_error",
+            "rmse": "neg_root_mean_squared_error",
+            "r2": "r2",
+        },
+        n_jobs=1,
+        error_score="raise",
+    )
+    return {
+        "mae_mean": float(-scores["test_mae"].mean()),
+        "mae_std": float(scores["test_mae"].std()),
+        "rmse_mean": float(-scores["test_rmse"].mean()),
+        "rmse_std": float(scores["test_rmse"].std()),
+        "r2_mean": float(scores["test_r2"].mean()),
+        "r2_std": float(scores["test_r2"].std()),
+    }
+
+
+def select_best_model(results):
+    return min(
+        results,
+        key=lambda item: item["cross_validation"]["rmse_mean"],
+    )
+
+
 def main():
     if not DATA_PATH.exists():
         raise FileNotFoundError(
@@ -78,6 +116,7 @@ def main():
     )
 
     models = {
+        "linear_regression": build_pipeline(LinearRegression()),
         "random_forest": build_pipeline(
             RandomForestRegressor(n_estimators=250, min_samples_leaf=2, n_jobs=-1, random_state=42)
         ),
@@ -101,15 +140,120 @@ def main():
     with mlflow.start_run(run_name="model_comparison"):
         for name, model in models.items():
             with mlflow.start_run(run_name=name, nested=True):
+                cv_metrics = cross_validate_model(model, X_train, y_train)
                 result = evaluate(name, model, X_train, y_train, X_test, y_test)
+                result["cross_validation"] = cv_metrics
                 mlflow.log_metrics(
-                    {"mae": result["mae"], "rmse": result["rmse"], "r2": result["r2"]}
+                    {
+                        "mae": result["mae"],
+                        "rmse": result["rmse"],
+                        "r2": result["r2"],
+                        **{
+                            f"cv_{key}": value
+                            for key, value in cv_metrics.items()
+                            if key.endswith("_mean")
+                        },
+                    }
                 )
                 results.append(result)
 
-    best = min(results, key=lambda item: item["rmse"])
+    best = select_best_model(results)
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(best["model"], MODEL_DIR / "diamond_model.joblib")
+    explainability_background = X_train.sample(
+        min(100, len(X_train)), random_state=42
+    ).reset_index(drop=True)
+    joblib.dump(explainability_background, MODEL_DIR / "shap_background.joblib")
+    price_explainer = DiamondPriceExplainer(
+        best["model"], explainability_background
+    )
+    shap_sample = X_test.sample(min(200, len(X_test)), random_state=42)
+    shap_values = price_explainer.explain(shap_sample)
+    shap_importance = (
+        shap_values.abs()
+        .mean()
+        .sort_values(ascending=False)
+        .rename("mean_absolute_shap")
+        .rename_axis("feature")
+        .reset_index()
+    )
+    shap_importance.to_csv(
+        REPORT_DIR / "shap_feature_importance.csv", index=False
+    )
+    shap_sample_explanations = shap_values.copy()
+    shap_sample_explanations.insert(
+        0, "actual_price", y_test.loc[shap_sample.index].to_numpy()
+    )
+    shap_sample_explanations.insert(
+        1, "predicted_price", best["model"].predict(shap_sample)
+    )
+    shap_sample_explanations.to_csv(
+        REPORT_DIR / "shap_sample_explanations.csv", index=False
+    )
+    shap_plot = px.bar(
+        shap_importance.sort_values("mean_absolute_shap"),
+        x="mean_absolute_shap",
+        y="feature",
+        orientation="h",
+        title="Mean absolute SHAP value on the test sample",
+        labels={"mean_absolute_shap": "Mean absolute contribution ($)"},
+    )
+    test_predictions = pd.DataFrame(
+        {
+            "actual_price": y_test.to_numpy(),
+            "predicted_price": best["model"].predict(X_test),
+        }
+    )
+    test_predictions["residual"] = (
+        test_predictions["actual_price"] - test_predictions["predicted_price"]
+    )
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    test_predictions.to_csv(REPORT_DIR / "model_predictions.csv", index=False)
+    prediction_sample = test_predictions.sample(
+        min(5000, len(test_predictions)), random_state=42
+    )
+    actual_vs_predicted = px.scatter(
+        prediction_sample,
+        x="actual_price",
+        y="predicted_price",
+        title=f"{best['name']}: Actual vs Predicted Prices",
+        labels={"actual_price": "Actual price ($)", "predicted_price": "Predicted price ($)"},
+        opacity=0.55,
+    )
+    actual_vs_predicted.add_trace(
+        go.Scatter(
+            x=[0, float(test_predictions["actual_price"].max())],
+            y=[0, float(test_predictions["actual_price"].max())],
+            mode="lines",
+            name="Perfect prediction",
+        )
+    )
+    residual_plot = px.scatter(
+        prediction_sample,
+        x="predicted_price",
+        y="residual",
+        title=f"{best['name']}: Residuals vs Predicted Prices",
+        labels={"predicted_price": "Predicted price ($)", "residual": "Residual ($)"},
+        opacity=0.55,
+    )
+    residual_plot.add_hline(y=0, line_dash="dash")
+    (REPORT_DIR / "model_diagnostics.html").write_text(
+        "\n".join(
+            [
+                "<h1>Model Evaluation</h1>",
+                f"<p>Selected model: {best['name']}</p>",
+                "<p>These plots use the held-out test split. Residual = actual - predicted.</p>",
+                actual_vs_predicted.to_html(full_html=False, include_plotlyjs="cdn"),
+                residual_plot.to_html(full_html=False, include_plotlyjs=False),
+                "<h2>SHAP feature importance</h2>",
+                "<p>Absolute contributions are averaged over a random sample of "
+                "200 held-out rows. This describes model behaviour, not causation.</p>",
+                shap_plot.to_html(full_html=False, include_plotlyjs=False),
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     engineered = DiamondFeatureEngineer().fit_transform(df)
     anomaly_columns = ["carat", "depth", "table", "x", "y", "z", "premium_score"]
@@ -166,12 +310,28 @@ def main():
     metadata = {
         "selected_model": best["name"],
         "metrics": {
-            item["name"]: {key: item[key] for key in ("mae", "rmse", "r2")}
+            item["name"]: {
+                **{key: item[key] for key in ("mae", "rmse", "r2")},
+                "cross_validation": item["cross_validation"],
+            }
             for item in results
         },
         "row_count": len(df),
+        "evaluation": {
+            "test_fraction": 0.20,
+            "cross_validation_folds": 3,
+            "random_state": 42,
+            "selection_metric": "mean cross-validation RMSE",
+        },
         "feature_columns": list(X.columns),
         "feature_importance": importance,
+        "shap_feature_importance": [
+            {
+                "feature": row.feature,
+                "mean_absolute_shap": float(row.mean_absolute_shap),
+            }
+            for row in shap_importance.itertuples(index=False)
+        ],
     }
     (MODEL_DIR / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     print(json.dumps(metadata, indent=2))

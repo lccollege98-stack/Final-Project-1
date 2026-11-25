@@ -20,6 +20,7 @@ def build_report() -> None:
     raw = pd.read_csv(DATA_PATH)
     df = clean_diamonds(raw)
     engineered = DiamondFeatureEngineer().fit_transform(df)
+    analysis = df.assign(price_per_carat=df["price"] / df["carat"])
 
     missing_before = int(raw.isna().sum().sum())
     duplicate_count = int(raw.duplicated().sum())
@@ -39,7 +40,9 @@ def build_report() -> None:
         "<h2>Numeric Summary</h2>",
         df.describe(include="number").round(2).to_html(),
         "<h2>Price Distribution</h2>",
-        px.histogram(df, x="price", nbins=60).to_html(full_html=False),
+        px.histogram(df, x="price", nbins=60).to_html(
+            full_html=False, include_plotlyjs="cdn"
+        ),
         "<h2>Carat vs Price</h2>",
         px.scatter(
             df.sample(min(5000, len(df)), random_state=42),
@@ -47,16 +50,28 @@ def build_report() -> None:
             y="price",
             color="cut",
             opacity=0.7,
-        ).to_html(full_html=False),
+        ).to_html(full_html=False, include_plotlyjs=False),
         "<h2>Cut Quality vs Price</h2>",
-        px.box(df, x="cut", y="price").to_html(full_html=False),
+        px.box(df, x="cut", y="price").to_html(
+            full_html=False, include_plotlyjs=False
+        ),
+        "<h2>Price per Carat</h2>",
+        "<p>Calculated as price divided by carat for descriptive analysis only. "
+        "It is not used as a model input because it contains the target price.</p>",
+        px.scatter(
+            analysis.sample(min(5000, len(analysis)), random_state=42),
+            x="carat",
+            y="price_per_carat",
+            color="cut",
+            opacity=0.6,
+        ).to_html(full_html=False, include_plotlyjs=False),
         "<h2>Correlation Heatmap</h2>",
         px.imshow(
             engineered[
                 ["price", "carat", "depth", "table", "x", "y", "z", "volume", "premium_score"]
             ].corr(),
             text_auto=".2f",
-        ).to_html(full_html=False),
+        ).to_html(full_html=False, include_plotlyjs=False),
     ]
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -76,8 +91,10 @@ def build_report() -> None:
                 f"- Rows with zero or negative dimensions: {invalid_dimensions:,}",
                 f"- Median price: ${df['price'].median():,.2f}",
                 f"- Median carat: {df['carat'].median():.2f}",
+                f"- Median price per carat: ${analysis['price_per_carat'].median():,.2f}",
                 "",
-                "The HTML report contains price, carat, cut, and correlation visualizations.",
+                "Price per carat is used only for analysis because it is calculated from the price target.",
+                "The HTML report contains price, carat, cut, price-per-carat, and correlation charts.",
             ]
         ),
         encoding="utf-8",

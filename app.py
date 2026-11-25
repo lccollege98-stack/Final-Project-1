@@ -15,10 +15,11 @@ DATA_PATH = "data/diamonds.csv"
 MODEL_PATH = "models/diamond_model.joblib"
 SEGMENTATION_PATH = "models/segmentation.joblib"
 METADATA_PATH = "models/metadata.json"
+SHAP_BACKGROUND_PATH = "models/shap_background.joblib"
 
 st.set_page_config(page_title="Diamond Intelligence", layout="wide")
 st.title("Diamond Price and Market Analysis")
-st.caption("Decision support for diamond retailers and buyers - not a replacement for a certified appraisal.")
+st.caption("Price predictions are estimates from this dataset, not certified valuations.")
 
 
 @st.cache_data
@@ -47,12 +48,23 @@ def load_metadata():
         return json.load(file)
 
 
+@st.cache_resource
+def load_price_explainer():
+    from src.explainability import DiamondPriceExplainer
+
+    return DiamondPriceExplainer(
+        load_model(),
+        joblib.load(SHAP_BACKGROUND_PATH),
+    )
+
+
 try:
     df = load_data()
     model = load_model()
     assistant = load_assistant()
     segmentation = load_segmentation()
     metadata = load_metadata()
+    price_explainer = load_price_explainer()
 except Exception as exc:
     st.error(f"Project artifacts are not ready: {exc}")
     st.info("Run `python src/train.py` after placing the dataset in `data/diamonds.csv`.")
@@ -78,6 +90,18 @@ with tab1:
     left, right = st.columns(2)
     left.plotly_chart(px.histogram(df, x="price", nbins=60, title="Price Distribution"), use_container_width=True)
     right.plotly_chart(px.scatter(df.sample(min(5000, len(df)), random_state=42), x="carat", y="price", color="cut", title="Carat vs Price"), use_container_width=True)
+    price_per_carat = df.assign(price_per_carat=df["price"] / df["carat"])
+    st.plotly_chart(
+        px.scatter(
+            price_per_carat.sample(min(5000, len(price_per_carat)), random_state=42),
+            x="carat",
+            y="price_per_carat",
+            color="cut",
+            title="Price per Carat (analysis only)",
+            labels={"price_per_carat": "Price per carat ($)"},
+        ),
+        use_container_width=True,
+    )
 
     engineered = DiamondFeatureEngineer().fit_transform(df)
     heatmap_columns = ["price", "carat", "depth", "table", "x", "y", "z", "volume", "premium_score"]
@@ -133,6 +157,16 @@ with tab2:
         }])
         estimate = float(model.predict(input_df)[0])
         st.metric("Estimated Market Value", f"${estimate:,.2f}")
+        shap_explanations = price_explainer.explain(input_df)
+        local_explanation = shap_explanations.iloc[0].sort_values(
+            key=lambda values: values.abs()
+        )
+        st.caption(
+            "Base value: "
+            f"${float(shap_explanations.attrs['base_values'][0]):,.2f}"
+        )
+        st.caption("Factors affecting this estimate (SHAP contributions)")
+        st.bar_chart(local_explanation)
         if listed_price > 0:
             difference = (listed_price - estimate) / estimate * 100
             if difference > 15:
@@ -199,5 +233,10 @@ with tab5:
         "Permutation importance shows how much the model error changes when "
         "an input feature is shuffled."
     )
-    importance = pd.DataFrame(metadata["feature_importance"])
-    st.bar_chart(importance.set_index("feature"))
+    perm_col, shap_col = st.columns(2)
+    perm_col.caption("Permutation importance: increase in test error when shuffled")
+    permutation = pd.DataFrame(metadata["feature_importance"])
+    perm_col.bar_chart(permutation.set_index("feature"))
+    shap_col.caption("SHAP: average absolute contribution on the held-out sample")
+    shap_importance = pd.DataFrame(metadata["shap_feature_importance"])
+    shap_col.bar_chart(shap_importance.set_index("feature"))
